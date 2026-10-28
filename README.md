@@ -14,13 +14,15 @@ Requires Python 3.11+.
 ```bash
 git clone <repo-url>
 cd tbp-ml-feedback
-python -m venv .venv
-Windows: .venv\Scripts\activate     # source .venv/bin/activate
+python3 -m venv .venv               # Windows: py -m venv .venv
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
 pip install -e ".[dev,ml]"          # If you're not doing ML, `pip install -e ".[dev]"` skips the large PyTorch download.
 wandb login                         # ONLY if you're using wandb for training; never commit your API key
 ```
 
-If you're only working on the generator or visualiser, `pip install -e ".[dev]"` skips the large PyTorch download.
+Check your Python version with `python3 --version` (Windows: `py --version`). It must be 3.11 or newer. On a Mac, get a newer one from python.org or with `brew install python@3.11`.
+
+If you don't have an NVIDIA GPU, run `pip install torch --index-url https://download.pytorch.org/whl/cpu` before the `pip install -e` step. That gets the much smaller CPU-only PyTorch.
 
 Check everything works:
 
@@ -34,7 +36,7 @@ pytest
 2. Reinstall: `pip install -e ".[dev,ml]"`.
 3. Commit `pyproject.toml` in the same pull request as the code that uses it.
 
-Note: if a dependency it isn't in `pyproject.toml`, it'll break for everyone else and in CI.
+Note: if a dependency isn't in `pyproject.toml`, it'll break for everyone else and in CI.
 
 ## Layout
 
@@ -49,7 +51,6 @@ src/tactile/
 scripts/           Run-only scripts
 configs/           W&B sweep configs
 tests/             pytest tests
-notebooks/         exploration only, never imported by src/
 data/              generated datasets (git-ignored)
 ```
 

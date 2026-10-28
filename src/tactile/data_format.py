@@ -33,9 +33,9 @@ def save_recording(path, frames, *, fs=DEFAULT_FS, labels=None, contact=None, me
     generator output first, e.g. np.clip(np.rint(x), 0, ADC_MAX), because
     casting to uint16 truncates and wraps out-of-range values.
     """
-    return None
+    raise NotImplementedError
 
 
 def load_recording(path):
     """Load a recording saved by save_recording. Returns a dict of arrays; `meta` is a dict."""
-    return None
+    raise NotImplementedError
