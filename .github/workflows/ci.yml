@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # CPU-only torch is much smaller than the default build; install it first
+      # so the "ml" extra doesn't pull the large one
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -e ".[dev,ml]"
+      - run: pytest
+      # --help runs each script's imports, then exits before doing any work.
+      # nullglob makes the loop a no-op while scripts/ has no .py files.
+      - name: Check scripts import
+        run: |
+          shopt -s nullglob
+          for f in scripts/*.py; do python "$f" --help > /dev/null || exit 1; done

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+
+# Data and outputs (regenerate from seeds instead of committing)
+data/*
+!data/.gitkeep
+*.npz
+*.h5
+*.hdf5
+checkpoints/
+*.pt
+*.pth
+
+# Weights & Biases
+wandb/
+
+# Secrets
+.env
+
+# Notebooks / editors / OS
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store

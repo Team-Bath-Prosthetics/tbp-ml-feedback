@@ -1,0 +1,1 @@
+"""Synthetic tactile dataset generator."""

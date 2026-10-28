@@ -1,0 +1,11 @@
+# Each folder's owner is asked to review pull requests that touch it.
+# Replace the placeholders with GitHub usernames (with a leading @) and uncomment.
+# Later lines take precedence over earlier ones.
+
+# *                          LEAD_USERNAME
+# /src/tactile/data_format.py LEAD_USERNAME
+# /src/tactile/generator/    DASHA_USERNAME ED_USERNAME
+# /src/tactile/viz/          ED_USERNAME
+# /src/tactile/noise.py      ANU_USERNAME
+# /src/tactile/models/       KARAM_USERNAME ANU_USERNAME
+# /src/tactile/training/     KARAM_USERNAME
