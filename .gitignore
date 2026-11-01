@@ -20,9 +20,13 @@ checkpoints/
 
 # Weights & Biases
 wandb/
+.wandb/
 
-# Secrets
+# Secrets & W&B credentials
 .env
+.env.*
+.netrc
+_netrc
 
 # Notebooks / editors / OS
 .ipynb_checkpoints/
