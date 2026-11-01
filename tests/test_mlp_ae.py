@@ -40,7 +40,8 @@ def test_forward_with_raw_uint16_generator_frames():
     adc_recon = model.to_adc(recon)
     assert adc_recon.shape == (8, *FRAME_SHAPE)
     assert adc_recon.dtype == torch.uint16
-    assert int(adc_recon.min()) >= 0 and int(adc_recon.max()) <= ADC_MAX
+    adc_recon_i32 = adc_recon.to(torch.int32)
+    assert int(adc_recon_i32.min()) >= 0 and int(adc_recon_i32.max()) <= ADC_MAX
 
 
 def test_forward_with_normalized_float_input():
