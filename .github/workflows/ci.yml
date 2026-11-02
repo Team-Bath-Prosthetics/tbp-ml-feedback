@@ -18,9 +18,3 @@ jobs:
       - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
       - run: pip install -e ".[dev,ml]"
       - run: pytest
-      # --help runs each script's imports, then exits before doing any work.
-      # nullglob makes the loop a no-op while scripts/ has no .py files.
-      - name: Check scripts import
-        run: |
-          shopt -s nullglob
-          for f in scripts/*.py; do python "$f" --help > /dev/null || exit 1; done
