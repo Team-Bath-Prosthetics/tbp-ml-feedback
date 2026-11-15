@@ -1,5 +1,5 @@
 from tactile.data_format import FRAME_SHAPE
-from tactile.hand_layout import NUM_PADS, PAD_NAMES, REGIONS, Pad
+from tactile.hand_layout import NUM_PADS, PAD_NAMES, REGIONS, VIZ_GRID, Pad
 
 
 def test_pad_count_matches_frame_shape():
@@ -18,3 +18,7 @@ def test_pad_names_line_up_with_indices():
 def test_regions_cover_every_pad_once():
     grouped = [p for pads in REGIONS.values() for p in pads]
     assert sorted(grouped) == list(Pad)
+
+
+def test_viz_grid_contains_every_pad_once():
+    assert sorted(p for row in VIZ_GRID for p in row) == list(Pad)
