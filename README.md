@@ -58,6 +58,6 @@ data/              generated datasets (git-ignored)
 
 1. Create a branch. 
 2. Keep changes small. Run `pytest` before pushing.
-3. Open a pull request into `main`. It needs passing CI and one approval, including from the owner of the folder you changed (see `.github/CODEOWNERS`).
+3. Open a pull request into `main`. It needs to pass CI.
 
 You can use AI tools, but you must understand and be able to explain every line you submit.
