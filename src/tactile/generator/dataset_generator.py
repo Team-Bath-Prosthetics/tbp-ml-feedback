@@ -4,7 +4,7 @@ The repository's :mod:`tactile.data_format` owns the on-disk NPZ schema.
 This module deliberately does not write NPZ archives itself.
 """
 
-# TODO: dataset generator fails when fs > frames
+#TODO: dataset generator fails when fs > frames
 #TODO: make_sure generator intensitiy varies based on ADC_MAX. Assumes ADC_MAX = 4095
 
 from dataclasses import asdict, dataclass
@@ -26,7 +26,7 @@ class ContactEvent:
     start: float
     duration: float
     intensity: float # peak ADC-count (0..ADC_MAX)
-    size: float = 1.5 # standard deviation of the Gaussian patch
+    size: float = 1.5 # standard deviation of the Gaussian patch, how quickly the gaussian smooths out to 0
     center: tuple[float, float] | None = None
 
 
@@ -108,11 +108,11 @@ class DatasetGenerator:
         else:
             resolved_events = tuple(events)
 
-        rows, columns = np.mgrid[0:height, 0:width]
+        rows, columns = np.mgrid[0:height, 0:width] # used later when calculating pressure 
         times = np.arange(num_frames, dtype=np.float64) / fs # time array [0.00, 0.01, 0.02, ..., recording_duration]
         frames = rng.normal(0.0, noise_std, size=(num_frames, *frame_shape)) # recording array filled with Gaussian noise
 
-        normalized_events = []
+        normalized_events = [] # stores the cleaned-up event (e.g. corrects missing center-values)
         for event in resolved_events:
             if not isinstance(event, ContactEvent):
                 raise TypeError("events must contain ContactEvent values")
@@ -128,7 +128,7 @@ class DatasetGenerator:
             if event.duration <= 0 or event.intensity < 0 or event.size <= 0:
                 raise ValueError("event duration and size must be positive; intensity cannot be negative")
 
-            center = event.center or ((height - 1) / 2, (width - 1) / 2)
+            center = event.center or ((height - 1) / 2, (width - 1) / 2) # if nothing is passed as event.center then default to pad middle position
             if len(center) != 2 or not all(np.isfinite(value) for value in center):
                 raise ValueError("event center must contain finite row and column coordinates")
             center_row, center_column = center
@@ -147,7 +147,7 @@ class DatasetGenerator:
                 pressure = np.exp(
                     -((rows - center_row) ** 2 + (columns - center_column) ** 2)
                     / (2.0 * event.size**2)
-                )
+                ) # unnormalized, peak height is 1.0 and total area under curve varies
                 frames[active, int(pad)] += event.intensity * envelope[:, None, None] * pressure
 
             normalized_events.append( # store the cleaned-up event
