@@ -5,7 +5,6 @@ This module deliberately does not write NPZ archives itself.
 """
 
 #TODO: dataset generator fails when fs > frames
-#TODO: make_sure generator intensitiy varies based on ADC_MAX. Assumes ADC_MAX = 4095
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -96,7 +95,7 @@ class DatasetGenerator:
                         pad=Pad(int(rng.integers(NUM_PADS))),
                         start=start,
                         duration=duration,
-                        intensity=float(rng.uniform(500.0, 3000.0)), #TODO: make_sure intensitiy varies based on ADC_MAX. Assumes ADC_MAX = 4095
+                        intensity=float(rng.uniform(0.50, 0.80) * self.adc_max), # 40-80% of full scale
                         size=float(rng.uniform(0.7, 2.0)), # standard deviation of the Gaussian patch
                         center=(
                             float(rng.uniform(0.0, max(0, height - 1))),
@@ -269,3 +268,8 @@ class DatasetGenerator:
             raise TypeError("meta must be a mapping or None")
         validated = self.validate_frames(frames)
         data_format.save_recording(path, validated, fs=float(fs), meta=dict(meta) if meta is not None else None)
+
+if __name__ == "__main__":
+    gen = DatasetGenerator((20, 10, 10))
+    events = [ContactEvent(1, 0.1, 5, 4000, size=2), ContactEvent(2, 0.1, 5, 4000, size=2), ContactEvent(3, 0.1, 5, 4000, size=2)]
+    gen.generate_dataset("testDs.npz", 100, events=events)
