@@ -45,3 +45,27 @@ def test_bad_shapes_are_rejected(tmp_path, shape):
         save_recording(tmp_path / "rec.npz", np.zeros(shape, dtype=np.uint16))
 
 
+def test_round_trip(tmp_path, frames):
+    path = tmp_path / "rec.npz"
+    save_recording(path, frames, fs=30.0, meta={"seed": 1})
+
+    rec = load_recording(path)
+    assert rec["frames"].dtype == np.uint16
+    np.testing.assert_array_equal(rec["frames"], frames)
+    assert rec["fs"] == 30.0
+    assert rec["meta"] == {"seed": 1}
+
+
+def test_relative_path_round_trips_through_data_dir(tmp_path, monkeypatch, frames):
+    monkeypatch.setattr(data_format, "DATA_DIR", tmp_path)
+    save_recording("sweep1/rec.npz", frames)
+
+    assert (tmp_path / "sweep1" / "rec.npz").is_file()
+    np.testing.assert_array_equal(load_recording("sweep1/rec.npz")["frames"], frames)
+
+
+def test_load_missing_key_raises(tmp_path):
+    path = tmp_path / "bad.npz"
+    np.savez_compressed(path, fs=np.float32(30.0), meta=np.array("{}"))
+    with pytest.raises(KeyError, match="frames"):
+        load_recording(path)

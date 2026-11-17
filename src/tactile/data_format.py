@@ -14,6 +14,7 @@ T is the number of frames (time). The default frame shape is (20, 10, 10):
 20 pads, each a 10x10 grid of sensors. Other frame shapes are allowed, because
 the real hardware layout is not decided yet.
 """
+# TODO: Prevent overwriting if a file with that name already exists. 
 
 import json
 from pathlib import Path
@@ -56,11 +57,25 @@ def save_recording(path: str | Path, frames: np.ndarray, *, fs: float = DEFAULT_
     )
 
 
-def load_recording(path):
+def load_recording(path: str | Path) -> dict:
     """Load a recording saved by save_recording. Returns a dict of arrays; `meta` is a dict."""
-    raise NotImplementedError
+    path = _resolve(path)
+
+    with np.load(path) as data:
+        missing = {"frames", "fs", "meta"} - set(data.files)
+        if missing:
+            raise KeyError(f"{path} is missing {sorted(missing)}")
+        
+        frames = data["frames"]
+        fs = float(data["fs"])
+        meta = json.loads(str(data["meta"]))
+
+    return {"frames": frames, "fs": fs, "meta": meta}
+
+
 
 if __name__ == "__main__":
     frames = np.random.randint(0, ADC_MAX + 1, size=(30, *FRAME_SHAPE))
-    # print(_resolve("john.npz"))
     save_recording("john.npz", frames, fs=30)
+    rec = load_recording("john.npz")
+    print(rec["fs"], rec["meta"], rec["frames"])
