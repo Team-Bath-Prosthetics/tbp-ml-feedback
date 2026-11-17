@@ -24,18 +24,43 @@ FRAME_SHAPE = (20, 10, 10)
 DEFAULT_FS = 100.0
 ADC_BITS = 12
 ADC_MAX = 2**ADC_BITS - 1  # 4095
+DATA_DIR = Path(__file__).resolve().parents[2] / "data" # requires editable install
 
+def _resolve(path: str | Path) -> Path:
+    path = Path(path)
+    return path if path.is_absolute() else DATA_DIR / path
 
-def save_recording(path, frames, *, fs=DEFAULT_FS, labels=None, contact=None, meta=None):
+def save_recording(path: str | Path, frames: np.ndarray, *, fs: float = DEFAULT_FS, meta: dict | None = None) -> None:
     """Save one recording to a compressed .npz file.
 
     `frames` must already hold integer readings in 0..ADC_MAX. Convert float
     generator output first, e.g. np.clip(np.rint(x), 0, ADC_MAX), because
     casting to uint16 truncates and wraps out-of-range values.
     """
-    raise NotImplementedError
+    frames = np.asarray(frames)
+    if frames.ndim < 2 or 0 in frames.shape:
+        raise ValueError(f"frames must be (T, *frame_shape) with no empty axes, got {frames.shape}")
+    if not np.issubdtype(frames.dtype, np.integer):
+        raise TypeError(f"frames must be integers, got {frames.dtype}")
+    lo, hi = frames.min(), frames.max()
+    if lo < 0 or hi > ADC_MAX:
+        raise ValueError(f"frames must be in 0..{ADC_MAX}, got range {lo}..{hi}")
+
+    path = _resolve(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        file=path,
+        frames=frames.astype(np.uint16, copy=False),
+        fs=np.float32(fs),
+        meta=np.array(json.dumps(meta or {})),
+    )
 
 
 def load_recording(path):
     """Load a recording saved by save_recording. Returns a dict of arrays; `meta` is a dict."""
     raise NotImplementedError
+
+if __name__ == "__main__":
+    frames = np.random.randint(0, ADC_MAX + 1, size=(30, *FRAME_SHAPE))
+    # print(_resolve("john.npz"))
+    save_recording("john.npz", frames, fs=30)
