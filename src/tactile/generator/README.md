@@ -58,11 +58,11 @@ event = ContactEvent(
     size=1.2,
 )
 
-frames = generator.generate_frames(200, fs=100, events=[event], seed=42)
-# Saving works once the shared data-format writer is implemented.
-generator.generate_dataset(
-    "data/example.npz", 200, fs=100, events=[event], seed=42
-)
+generator.validate_frames(frames)  # Can be used before shared storage is ready
+# After data_format.save_recording is implemented:
+# A relative path goes under the repo's data/ folder: <repo>/data/example.npz
+generator.save_dataset("example.npz", frames, fs=30.0,
+                       meta={"source": "week1_mock"})
 ```
 
 Install the development dependencies and run the focused tests with
