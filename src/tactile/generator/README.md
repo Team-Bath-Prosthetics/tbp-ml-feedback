@@ -1,58 +1,69 @@
 # Tactile dataset generator
 
-Week 1 foundation for Team Bath Prosthetics' Novel Feedback dataset generator.
+`DatasetGenerator` creates simple, reproducible synthetic contact recordings
+for exercising the current autoencoder pipeline. This simulation is a useful
+software test input, not a validated physical model of the hardware.
 
-## Scope
+## Recording contract
 
-`DatasetGenerator` validates a time-series NumPy array and forwards it to the
-repository's shared `tactile.data_format.save_recording` function. It does **not**
-create synthetic pressure patterns yet; that is a separate workstream.
+- Frames have shape `(T, *frame_shape)`, with time first. The default is
+  `(T, 20, 10, 10)` at 100 Hz.
+- The Week 1 mock layout `(20, 10, 5)` at 30 Hz is also supported by passing
+  `frame_shape=(20, 10, 5)` and `fs=30`.
+- Generated values are raw integer ADC counts in `[0, adc_max]`, returned as
+  `uint16`. The default `adc_max` is 4095 (12-bit readings).
+- Simulation currently requires a frame shape with 20 pads and two spatial
+  dimensions. `validate_frames` can accept other non-empty layouts when no
+  `frame_shape` constraint is configured.
+- The shared archive convention is `frames`, `fs`, and `meta`, owned by
+  `tactile.data_format`.
 
-> **Integration status:** `data_format.save_recording` currently raises
-> `NotImplementedError`. Unit tests mock that function to verify the interface.
-> Actual `.npz` saving will work only after the shared writer is implemented.
+## Synthetic contacts
 
-## Data contract
+- Each contact names a pad, start time, duration, peak intensity, spatial size,
+  and optional sensor-grid center.
+- The default is three random events per recording. Their duration is between
+  0.15 and 0.8 seconds, capped by the recording duration; their intensity and
+  spatial size are randomized. Pass `n_events` to change the number, or pass
+  explicit `ContactEvent` values with `events`.
+- Use `seed` to make the same settings produce the same frames. `noise_std`
+  controls the Gaussian background noise and defaults to 2 ADC counts.
+- `generate_dataset` records the seed, sampling rate, noise setting, and
+  resolved events in metadata, alongside any user-provided metadata.
 
-- Shape: `(T, *frame_shape)` with nonempty time and sensor axes.
-- Week 1 example: `(T, 20, 10, 5)` at **30 Hz**.
-- Repository's current generic frame shape: `(T, 20, 10, 10)` at **100 Hz**.
-- Values: integer ADC readings in `[0, 4095]`, converted to `uint16` only after validation.
-- Shared archive convention (owned by `data_format.py`): `frames`, `fs`, `meta`.
-- Other sensor layouts are allowed while hardware specifications evolve.
+## Generating and saving
 
-## Example
+`generate_frames` returns a NumPy array and can be used without the storage
+API. `save_dataset` and `generate_dataset` delegate persistence to
+`tactile.data_format.save_recording`; this shared writer is maintained
+separately and currently raises `NotImplementedError` until implemented.
 
-From an environment where the repository package is installed (`pip install -e '.[dev,ml]'`):
+The generator rounds and clips simulated floating-point values to the ADC range
+before converting them to `uint16`. For externally supplied frames,
+`validate_frames` rejects non-integer or out-of-range values rather than
+silently clipping them.
+
+Example, using the repository defaults:
 
 ```python
-import numpy as np
-from tactile.generator.dataset_generator import DatasetGenerator
+from tactile.generator.dataset_generator import ContactEvent, DatasetGenerator
+from tactile.hand_layout import Pad
 
-frames = np.zeros((30, 20, 10, 5), dtype=np.uint16)
-generator = DatasetGenerator(frame_shape=(20, 10, 5))
+generator = DatasetGenerator()
+event = ContactEvent(
+    pad=Pad.INDEX_TIP,
+    start=0.5,
+    duration=0.4,
+    intensity=1800,
+    size=1.2,
+)
 
 generator.validate_frames(frames)  # Can be used before shared storage is ready
 # After data_format.save_recording is implemented:
-generator.save_dataset(frames, "data/example.npz", fs=30.0,
+# A relative path goes under the repo's data/ folder: <repo>/data/example.npz
+generator.save_dataset("example.npz", frames, fs=30.0,
                        meta={"source": "week1_mock"})
 ```
 
-## Tests
-
-Run `pytest` from the repository root after installing its development extras.
-The tests mock the shared writer so they can pass before the storage API is complete.
-
-## Extending the module
-
-Keep sensor simulation separate from validation and persistence. New generator
-methods should produce NumPy frames and call `save_dataset` rather than writing
-`.npz` files independently. Do not silently clip out-of-range readings; if a
-simulation produces floats, round/clip explicitly at the simulation boundary.
-
-## Known decisions to confirm with the team
-
-- Whether the Week 1 30 Hz configuration or the repository's 100 Hz default is
-  expected for a given recording.
-- Who will implement `data_format.save_recording` and `load_recording`.
-- Final sensor layout and metadata naming conventions.
+Install the development dependencies and run the focused tests with
+`pytest tests/test_dataset_generator.py` from the repository root.

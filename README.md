@@ -1,4 +1,4 @@
-# tbp-ml-feedback
+gi# tbp-ml-feedback
 
 Tools for turning prosthetic-hand tactile sensor data into vibration feedback:
 
@@ -54,10 +54,30 @@ tests/             pytest tests
 data/              generated datasets (git-ignored)
 ```
 
+## Where recordings are saved
+
+`tactile.data_format.save_recording` puts any **relative** path under the repo's `data/` folder, wherever you run it from:
+
+```python
+save_recording("run1.npz", frames, fs=30.0)            # -> <repo>/data/run1.npz
+save_recording("sweep3/rec_07.npz", frames, fs=30.0)   # -> <repo>/data/sweep3/rec_07.npz (folder created)
+save_recording("/media/usb/run1.npz", frames)          # absolute paths are used as given
+```
+
+Don't start the path with `data/`, or you'll get `data/data/...`.
+
+The repo root is found by looking upwards from your current directory for this project's `pyproject.toml`. If you're running from outside the repo, or want recordings somewhere else, set `TACTILE_DATA_DIR`:
+
+```bash
+export TACTILE_DATA_DIR=/path/to/recordings     # Windows (PowerShell): $env:TACTILE_DATA_DIR = "C:\path\to\recordings"
+```
+
+Tests should save to pytest's `tmp_path` (an absolute path), so they never write into `data/`.
+
 ## Workflow
 
 1. Create a branch. 
 2. Keep changes small. Run `pytest` before pushing.
-3. Open a pull request into `main`. It needs passing CI and one approval, including from the owner of the folder you changed (see `.github/CODEOWNERS`).
+3. Open a pull request into `main`. It needs to pass CI.
 
 You can use AI tools, but you must understand and be able to explain every line you submit.

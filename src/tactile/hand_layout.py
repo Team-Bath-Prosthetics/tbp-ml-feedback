@@ -68,3 +68,13 @@ REGIONS = {
     "PINKY": (Pad.PINKY_TIP, Pad.PINKY_MIDDLE, Pad.PINKY_PALM),
     "THENAR": (Pad.THENAR_UPPER, Pad.THENAR_INNER, Pad.THENAR_LOWER),
 }
+
+# Where each pad is drawn in the 2D heatmap used by tactile.viz.
+# For plotting only: this is a rough hand shape (palm side, thumb on the left),
+# not the physical position of the pads. Each row lists pads left -> right.
+VIZ_GRID = (
+    (Pad.THUMB_TIP, Pad.INDEX_TIP, Pad.MIDDLE_TIP, Pad.RING_TIP, Pad.PINKY_TIP),
+    (Pad.THUMB_BASE, Pad.INDEX_MIDDLE, Pad.MIDDLE_MIDDLE, Pad.RING_MIDDLE, Pad.PINKY_MIDDLE),
+    (Pad.THENAR_UPPER, Pad.INDEX_BASE, Pad.MIDDLE_BASE, Pad.RING_BASE, Pad.PINKY_PALM),
+    (Pad.THENAR_INNER, Pad.THENAR_LOWER, Pad.INDEX_PALM, Pad.MIDDLE_PALM, Pad.RING_PALM),
+)
