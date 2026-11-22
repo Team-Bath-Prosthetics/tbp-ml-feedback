@@ -59,6 +59,119 @@ def test_generate_frames_applies_ramp_envelope():
     )
 
 
+def test_hold_keeps_patch_at_same_center():
+    event = ContactEvent(
+        pad=Pad.INDEX_TIP,
+        start=0.1,
+        duration=0.6,
+        intensity=1000,
+        size=1.0,
+        center=(5.0, 5.0),
+        contact_type="hold",
+    )
+
+    frames = DatasetGenerator().generate_frames(
+        10, fs=10, events=[event], noise_std=0
+    )
+
+    for frame_index in range(2, 7):
+        pad_frame = frames[frame_index, Pad.INDEX_TIP]
+        strongest_row, strongest_column = np.unravel_index(
+            np.argmax(pad_frame), pad_frame.shape
+        )
+        assert (strongest_row, strongest_column) == (5, 5)
+
+
+def test_sliding_moves_patch_from_start_to_end():
+    event = ContactEvent(
+        pad=Pad.INDEX_TIP,
+        start=0.1,
+        duration=0.6,
+        intensity=1000,
+        size=1.0,
+        center=(2.0, 2.0),
+        contact_type="sliding",
+        end_center=(7.0, 7.0),
+    )
+
+    frames = DatasetGenerator().generate_frames(
+        10, fs=10, events=[event], noise_std=0
+    )
+
+    strongest_positions = []
+    for frame_index in range(2, 7):
+        pad_frame = frames[frame_index, Pad.INDEX_TIP]
+        strongest_row, strongest_column = np.unravel_index(
+            np.argmax(pad_frame), pad_frame.shape
+        )
+        strongest_positions.append((strongest_row, strongest_column))
+
+    assert strongest_positions[0] == (3, 3)
+    assert strongest_positions[-1] == (6, 6)
+    assert all( # checks if center row-column mvoes from (2,2) to (7,7)
+        strongest_positions[index][0] <= strongest_positions[index + 1][0]
+        and strongest_positions[index][1] <= strongest_positions[index + 1][1]
+        for index in range(len(strongest_positions) - 1)
+    )
+
+
+def test_rotation_moves_patch_around_center():
+    event = ContactEvent(
+        pad=Pad.INDEX_TIP,
+        start=0.1,
+        duration=0.6,
+        intensity=1000,
+        size=0.8,
+        center=(5.0, 5.0),
+        contact_type="rotation",
+        rotation_degrees=180.0,
+        rotation_radius=2.0,
+    )
+
+    frames = DatasetGenerator().generate_frames(
+        10, fs=10, events=[event], noise_std=0
+    )
+
+    strongest_positions = []
+    for frame_index in range(2, 7):
+        pad_frame = frames[frame_index, Pad.INDEX_TIP]
+        strongest_row, strongest_column = np.unravel_index(
+            np.argmax(pad_frame), pad_frame.shape
+        )
+        strongest_positions.append((strongest_row, strongest_column))
+
+    assert strongest_positions[0] == (6, 7)
+    assert strongest_positions[2] == (7, 5)
+    assert strongest_positions[-1] == (6, 3)
+    assert strongest_positions[0][1] > strongest_positions[2][1] > strongest_positions[-1][1]
+
+
+def test_sliding_requires_end_center():
+    event = ContactEvent(
+        pad=Pad.INDEX_TIP,
+        start=0.1,
+        duration=0.6,
+        intensity=1000,
+        contact_type="sliding",
+    )
+
+    with pytest.raises(ValueError, match="require end_center"):
+        DatasetGenerator().generate_frames(10, fs=10, events=[event])
+
+
+def test_invalid_contact_type_is_rejected():
+    event = ContactEvent(
+        pad=Pad.INDEX_TIP,
+        start=0.1,
+        duration=0.6,
+        intensity=1000,
+        contact_type="tapping",
+    )
+
+    with pytest.raises(ValueError, match="contact_type must be"):
+        DatasetGenerator().generate_frames(10, fs=10, events=[event])
+
+
 def test_generate_frames_rejects_conflicting_event_options():
     with pytest.raises(ValueError, match="either events or n_events"):
         DatasetGenerator().generate_frames(20, events=[], n_events=1)

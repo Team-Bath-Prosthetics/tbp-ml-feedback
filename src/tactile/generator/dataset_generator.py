@@ -28,6 +28,10 @@ class ContactEvent:
     intensity: float # peak ADC-count (0..ADC_MAX)
     size: float = 1.5 # standard deviation of the Gaussian patch, how quickly the gaussian smooths out to 0
     center: tuple[float, float] | None = None
+    contact_type: str = "hold"
+    end_center: tuple[float, float] | None = None
+    rotation_degrees: float = 360.0
+    rotation_radius: float = 2.0
 
 
 class DatasetGenerator:
@@ -96,7 +100,7 @@ class DatasetGenerator:
                         pad=Pad(int(rng.integers(NUM_PADS))),
                         start=start,
                         duration=duration,
-                        intensity=float(rng.uniform(500.0, 3000.0)), #TODO: make_sure intensitiy varies based on ADC_MAX. Assumes ADC_MAX = 4095
+                        intensity=float(rng.uniform(0.15 * self.adc_max, 0.85 * self.adc_max)),
                         size=float(rng.uniform(0.7, 2.0)), # standard deviation of the Gaussian patch
                         center=(
                             float(rng.uniform(0.0, max(0, height - 1))),
@@ -127,6 +131,8 @@ class DatasetGenerator:
                 raise ValueError("contact event start must fall within the recording")
             if event.duration <= 0 or event.intensity < 0 or event.size <= 0:
                 raise ValueError("event duration and size must be positive; intensity cannot be negative")
+            if event.contact_type not in {"hold", "sliding", "rotation"}:
+                raise ValueError("contact_type must be 'hold', 'sliding', or 'rotation'")
 
             center = event.center or ((height - 1) / 2, (width - 1) / 2) # if nothing is passed as event.center then default to pad middle position
             if len(center) != 2 or not all(np.isfinite(value) for value in center):
@@ -135,20 +141,57 @@ class DatasetGenerator:
             if not (0 <= center_row < height and 0 <= center_column < width):
                 raise ValueError("event center must lie within the sensor grid")
 
+            if event.contact_type == "sliding":
+                if event.end_center is None:
+                    raise ValueError("sliding contact events require end_center")
+                if len(event.end_center) != 2 or not all(np.isfinite(value) for value in event.end_center):
+                    raise ValueError("end_center must contain finite row and column coordinates")
+                end_row, end_column = event.end_center
+                if not (0 <= end_row < height and 0 <= end_column < width):
+                    raise ValueError("end_center must lie within the sensor grid")
+
+            if event.contact_type == "rotation":
+                if not np.isfinite(event.rotation_degrees):
+                    raise ValueError("rotation_degrees must be finite")
+                if not np.isfinite(event.rotation_radius) or event.rotation_radius < 0:
+                    raise ValueError("rotation_radius must be finite and non-negative")
+
             event_end = event.start + event.duration
             active = (times >= event.start) & (times < event_end) # mask e.g. [False, False, True, True, ... False] where the event can be active
             active_times = times[active] # get the actual times where the event is active, e.g. [0.02, 0.03, 0.04, ...]
             if active_times.size:
-                ramp = min(event.duration * 0.2, 0.1) # up/down time between event e.g. 0.1 seconds until full intensity is reached
-                envelope = np.minimum( # touch strength on each active frame
+                progress = (active_times - event.start) / event.duration
+                ramp = min(event.duration * 0.2, 0.1)
+                envelope = np.clip(
+                    np.minimum(active_times - event.start, event_end - active_times) / ramp,
+                    0.0,
                     1.0,
-                    np.minimum((active_times - event.start) / ramp, (event_end - active_times) / ramp),
                 )
-                pressure = np.exp(
-                    -((rows - center_row) ** 2 + (columns - center_column) ** 2)
-                    / (2.0 * event.size**2)
-                ) # unnormalized, peak height is 1.0 and total area under curve varies
-                frames[active, int(pad)] += event.intensity * envelope[:, None, None] * pressure
+
+                if event.contact_type == "hold":
+                    patch_rows = np.full(progress.shape, center_row) # e.g. [center_row, center_row, center_row, center_row, center_row]
+                    patch_columns = np.full(progress.shape, center_column)
+                elif event.contact_type == "sliding":
+                    patch_rows = center_row + progress * (end_row - center_row)
+                    patch_columns = center_column + progress * (end_column - center_column)
+                else:
+                    angles = progress * np.deg2rad(event.rotation_degrees)
+                    patch_rows = center_row + event.rotation_radius * np.sin(angles)
+                    patch_columns = center_column + event.rotation_radius * np.cos(angles)
+
+                if np.any(patch_rows < 0) or np.any(patch_rows >= height):
+                    raise ValueError("rotation path must lie within the sensor grid")
+                if np.any(patch_columns < 0) or np.any(patch_columns >= width):
+                    raise ValueError("rotation path must lie within the sensor grid")
+
+                for active_position, frame_index in enumerate(active.nonzero()[0]):
+                    patch_row = patch_rows[active_position]
+                    patch_column = patch_columns[active_position]
+                    pressure = np.exp(
+                        -((rows - patch_row) ** 2 + (columns - patch_column) ** 2)
+                        / (2.0 * event.size**2)
+                    )
+                    frames[frame_index, int(pad)] += event.intensity * envelope[active_position] * pressure
 
             normalized_events.append( # store the cleaned-up event
                 ContactEvent(
@@ -158,6 +201,10 @@ class DatasetGenerator:
                     intensity=float(event.intensity),
                     size=float(event.size),
                     center=(float(center_row), float(center_column)),
+                    contact_type=event.contact_type,
+                    end_center=(float(event.end_center[0]), float(event.end_center[1])) if event.end_center is not None else None,
+                    rotation_degrees=float(event.rotation_degrees),
+                    rotation_radius=float(event.rotation_radius),
                 )
             )
 
