@@ -128,7 +128,8 @@ def load_train_val_datasets(
     if not (0.0 < val_fraction < 1.0):
         raise ValueError(f"val_fraction must be in (0, 1), got {val_fraction}")
 
-    data_path = Path(data_dir)
+    # Absolute, so load_recording doesn't re-root relative paths under DATA_DIR (data/data/...)
+    data_path = Path(data_dir).resolve()
     npz_files = sorted(data_path.glob("*.npz"))
     if not npz_files:
         raise FileNotFoundError(f"No .npz recording files found in {data_path.resolve()}")
@@ -254,7 +255,7 @@ def train(config: TrainConfig | None = None) -> dict[str, float]:
         config=run_config,
         mode=cfg.wandb_mode,
     ) as run:
-        # Allow W&B sweeps to override hyperparameters dynamically
+        # Allow W&B sweeps to override hyperparameters dynamically (used by sweep config file)
         w_cfg = run.config
         seed = int(w_cfg.get("seed", cfg.seed))
         torch.manual_seed(seed)
