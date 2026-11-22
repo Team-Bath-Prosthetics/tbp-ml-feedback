@@ -1,6 +1,7 @@
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+from tactile import data_format
 from tactile.data_format import ADC_MAX, FRAME_SHAPE
 from tactile.hand_layout import VIZ_GRID
 
@@ -44,5 +45,7 @@ def pads_to_image(pads):
     return image
 
 if __name__ == "__main__":
-    frames = np.random.randint(0, ADC_MAX + 1, size=(30, *FRAME_SHAPE))
+    f = data_format.load_recording("testDs.npz")
+    frames = f["frames"]
+    print(frames)
     animate_recording(frames, 10)
