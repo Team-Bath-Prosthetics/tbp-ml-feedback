@@ -1,0 +1,64 @@
+# W&B sweep for the MLP autoencoder (src/tactile/training/mlp_ae_train.py).
+#
+# Run from the repo root (data_dir is resolved relative to where the agent runs):
+#   wandb sweep configs/mlp_ae_sweep.yaml          # prints a sweep ID
+#   wandb agent <entity>/tbp-ml-feedback/<sweep-id> # start one or more agents
+#   wandb agent --count 20 <entity>/tbp-ml-feedback/<sweep-id>   # stop after 20 runs
+#
+# Parameter names must match the keys train() reads from run.config
+# (the fields of TrainConfig). Values set here override TrainConfig defaults.
+
+program: src/tactile/training/mlp_ae_train.py
+project: tbp-ml-feedback
+name: mlp-ae-sweep
+method: bayes
+
+# The sweep values reach the run through wandb.init -> run.config, so no CLI
+# args are passed (the script's flags use hyphens and wouldn't match anyway).
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+
+metric:
+  name: val_loss
+  goal: minimize
+
+# Stop clearly bad runs early (val_loss is logged once per epoch).
+early_terminate:
+  type: hyperband
+  min_iter: 5
+  eta: 2
+
+parameters:
+  # Architecture
+  hidden_dims:
+    values:
+      - [256]
+      - [512]
+      - [256, 64]
+      - [512, 128]
+      - [1024, 256]
+      - [1024, 256, 64]
+  latent_dim:
+    values: [4, 8, 16, 32, 64]
+
+  # Optimisation
+  lr:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.01
+  batch_size:
+    values: [16, 32, 64, 128]
+  weight_decay:
+    values: [0.0, 0.00001, 0.0001, 0.001]
+  epochs:
+    value: 40
+
+  # Fixed for every run, so runs are comparable
+  data_dir:
+    value: data
+  val_fraction:
+    value: 0.2
+  seed:
+    value: 42
