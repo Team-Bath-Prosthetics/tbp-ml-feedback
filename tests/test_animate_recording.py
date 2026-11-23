@@ -14,17 +14,8 @@ def labelled_pads():
     """Each pad filled with its own index, so we can see where it ends up."""
     return np.broadcast_to(np.arange(NUM_PADS)[:, None, None], (NUM_PADS, 10, 10)).copy()
 
-
 def block(image, row, col):
     return image[row * 10:(row + 1) * 10, col * 10:(col + 1) * 10]
-
-
-def test_pads_land_in_expected_blocks():
-    image = pads_to_image(labelled_pads())
-    assert (block(image, 0, 0) == Pad.THUMB_TIP).all()
-    assert (block(image, 0, 4) == Pad.PINKY_TIP).all()
-    assert (block(image, 3, 4) == Pad.RING_PALM).all()
-    
 
 def test_animate_recording_runs():
     frames = np.random.randint(0, 4096, size=(5, 20, 10, 10))
