@@ -84,19 +84,31 @@ def animate_recording(frames, fs, name=None, show=True):
 
 
 def pads_to_image(pads):
-    '''takes a 20x10x10 NumPy array (this represents 20 10x10 grids of sensors) and formats them into a 40x50 2D array (4x5 10x10 pads)'''
-    
+    """
+    takes a 20x10x10 NumPy array (this represents 20 10x10 grids of sensors)
+    and arranges them into a hand shaped 2D image, size of VIZ_GRID
+    empty grid cells are left blank
+    """
     if pads.shape != FRAME_SHAPE:
-        raise ValueError(f"pads_to_image: expected input shape {FRAME_SHAPE}, given shape: {pads.shape}")
+        raise ValueError(f"pads_to_image: expected input shape {FRAME_SHAPE}, "f"given shape: {pads.shape}")
+    
+    pad_height, pad_width = pads.shape[1:]
 
-    image = np.zeros((40, 50), dtype=pads.dtype)
+    grid_rows = len(VIZ_GRID)
+    grid_cols = len(VIZ_GRID[0])
 
-    # place each of the 20 pads into its position on the (approx hand shaped) grid
+    image = np.zeros((grid_rows * pad_height, grid_cols * pad_width), dtype=pads.dtype)
+
+    # place each pad in its corresponding grid cell
     for row, pads_in_row in enumerate(VIZ_GRID):
         for col, pad in enumerate(pads_in_row):
-            image[row*10:(row+1)*10, col*10:(col+1)*10] = pads[pad]
+            # skip empty cells
+            if pad is None:
+                continue
+            image[row * pad_height:(row + 1) * pad_height, col * pad_width:(col + 1) * pad_width] = pads[pad]
 
     return image
+
 
 if __name__ == "__main__":
     f = data_format.load_recording("testDs.npz")
