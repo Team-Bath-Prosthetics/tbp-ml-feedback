@@ -1,4 +1,4 @@
-gi# tbp-ml-feedback
+# tbp-ml-feedback
 
 Tools for turning prosthetic-hand tactile sensor data into vibration feedback:
 
